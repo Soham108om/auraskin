@@ -6,6 +6,8 @@ import { useCart } from '../context/CartContext';
 import { Link } from 'react-router-dom';
 import { trackEvent } from '../utils/analytics';
 import { formatRupee } from '../utils/currency';
+import { useAuth } from '../context/AuthContext';
+import { supabase } from '../utils/supabase';
 
 interface Question {
   id: number;
@@ -48,6 +50,7 @@ const quizQuestions: Question[] = [
 
 export const SkinQuiz: React.FC = () => {
   const { addToCart } = useCart();
+  const { user, isDemoMode } = useAuth();
   const [step, setStep] = useState(0); // 0: intro, 1-3: questions, 4: results
   const [answers, setAnswers] = useState<string[]>([]);
   const [recommendations, setRecommendations] = useState<Product[]>([]);
@@ -103,6 +106,56 @@ export const SkinQuiz: React.FC = () => {
       const uniqueMatched = Array.from(new Set(matched)).slice(0, 3);
       setRecommendations(uniqueMatched);
       setStep(4);
+
+      // Save results to Supabase (or localStorage in sandbox)
+      const saveQuizResults = async () => {
+        let hydration = 80;
+        if (skinTypeAnswer === 'Dry') hydration = 35;
+        else if (skinTypeAnswer === 'Combination') hydration = 65;
+        else if (skinTypeAnswer === 'Oily') hydration = 50;
+
+        let sebum = 85;
+        if (skinTypeAnswer === 'Oily') sebum = 30;
+        else if (skinTypeAnswer === 'Combination') sebum = 55;
+
+        let barrier = 80;
+        const sensitivityVal = answers[2] || value;
+        if (sensitivityVal === 'Sensitive') barrier = 45;
+        else if (sensitivityVal === 'Resilient') barrier = 95;
+
+        if (isDemoMode) {
+          const mockQuiz = {
+            id: `q-${Date.now()}`,
+            created_at: new Date().toISOString(),
+            skin_type: skinTypeAnswer,
+            concern: concernAnswer,
+            sensitivity: sensitivityVal,
+            hydration,
+            sebum,
+            barrier
+          };
+          localStorage.setItem('auraskin_mock_quiz', JSON.stringify(mockQuiz));
+          return;
+        }
+
+        if (user && supabase) {
+          try {
+            await supabase.from('quiz_results').insert({
+              user_id: user.id,
+              skin_type: skinTypeAnswer,
+              concern: concernAnswer,
+              sensitivity: sensitivityVal,
+              hydration,
+              sebum,
+              barrier
+            });
+          } catch (err) {
+            console.error('Error saving quiz results to Supabase:', err);
+          }
+        }
+      };
+
+      saveQuizResults();
 
       trackEvent({
         name: 'cta_click',

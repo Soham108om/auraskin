@@ -23,10 +23,13 @@ import { Checkout } from './pages/Checkout';
 import { OrderSuccess } from './pages/OrderSuccess';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
+import { Dashboard } from './pages/Dashboard';
 import { Contact } from './pages/Contact';
 import { FAQ } from './pages/FAQ';
 import { PrivacyPolicy } from './pages/PrivacyPolicy';
 import { TermsConditions } from './pages/TermsConditions';
+
+import { AuthProvider } from './context/AuthContext';
 
 import { Product } from './types';
 import { MessageSquare, X, Send, ShoppingBag } from 'lucide-react';
@@ -105,6 +108,7 @@ export const AppContent: React.FC = () => {
             <Route path="/order-success" element={<OrderSuccess />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/dashboard" element={<Dashboard />} />
             <Route path="/contact" element={<Contact />} />
             <Route path="/faq" element={<FAQ />} />
             <Route path="/privacy" element={<PrivacyPolicy />} />
@@ -187,10 +191,12 @@ export const AppContent: React.FC = () => {
 
 export const App: React.FC = () => {
   return (
-    <CartProvider>
-      <WishlistProvider>
-        <AppContent />
-      </WishlistProvider>
-    </CartProvider>
+    <AuthProvider>
+      <CartProvider>
+        <WishlistProvider>
+          <AppContent />
+        </WishlistProvider>
+      </CartProvider>
+    </AuthProvider>
   );
 };

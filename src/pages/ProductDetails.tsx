@@ -9,7 +9,7 @@ import { ReviewCard } from '../components/ReviewCard';
 import { ProductCard } from '../components/ProductCard';
 import { trackEvent } from '../utils/analytics';
 import { formatRupee, getProductPrice } from '../utils/currency';
-
+import { supabase, isSupabaseConfigured } from '../utils/supabase';
 
 interface ProductDetailsProps {
   onQuickView: (product: Product) => void;
@@ -38,7 +38,6 @@ export const ProductDetails: React.FC<ProductDetailsProps> = ({ onQuickView }) =
     if (foundProduct) {
       setProduct(foundProduct);
       setSelectedImage(foundProduct.image);
-      setReviewList(foundProduct.reviews);
       setQuantity(1);
       setSelectedSize(foundProduct.sizes?.[0] || foundProduct.size);
       setSelectedScent(foundProduct.scents?.[0] || "Signature Blend");
@@ -60,6 +59,39 @@ export const ProductDetails: React.FC<ProductDetailsProps> = ({ onQuickView }) =
       recentList = recentList.filter((item) => item !== foundProduct.id);
       recentList.unshift(foundProduct.id);
       localStorage.setItem('auraskin_recent', JSON.stringify(recentList.slice(0, 8)));
+
+      // Fetch reviews from Supabase
+      const fetchDbReviews = async () => {
+        if (!isSupabaseConfigured() || !supabase) {
+          setReviewList(foundProduct.reviews);
+          return;
+        }
+        try {
+          const { data, error } = await supabase
+            .from('reviews')
+            .select('*')
+            .eq('product_id', id)
+            .order('created_at', { ascending: false });
+
+          if (error) throw error;
+          
+          const mappedDbReviews: Review[] = (data || []).map(r => ({
+            id: r.id,
+            user: r.user_name,
+            rating: r.rating,
+            comment: r.comment,
+            date: new Date(r.created_at).toISOString().split('T')[0],
+            verified: r.verified
+          }));
+
+          setReviewList([...mappedDbReviews, ...foundProduct.reviews]);
+        } catch (e) {
+          console.error('Error fetching reviews:', e);
+          setReviewList(foundProduct.reviews);
+        }
+      };
+
+      fetchDbReviews();
     }
   }, [id]);
 
@@ -84,11 +116,12 @@ export const ProductDetails: React.FC<ProductDetailsProps> = ({ onQuickView }) =
     .filter((p) => p.category === product.category && p.id !== product.id)
     .slice(0, 4);
 
-  const handleReviewSubmit = (e: React.FormEvent) => {
+  const handleReviewSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (reviewName.trim() && reviewComment.trim()) {
+      const newReviewId = `user_rev_${Date.now()}`;
       const newReview: Review = {
-        id: `user_rev_${Date.now()}`,
+        id: newReviewId,
         user: reviewName.trim(),
         rating: reviewRating,
         comment: reviewComment.trim(),
@@ -96,7 +129,23 @@ export const ProductDetails: React.FC<ProductDetailsProps> = ({ onQuickView }) =
         verified: true,
       };
 
+      // Optimistic update
       setReviewList((prev) => [newReview, ...prev]);
+
+      // Save to Supabase
+      if (isSupabaseConfigured() && supabase) {
+        try {
+          await supabase.from('reviews').insert({
+            product_id: id,
+            user_name: reviewName.trim(),
+            rating: reviewRating,
+            comment: reviewComment.trim(),
+            verified: true
+          });
+        } catch (err) {
+          console.error('Error submitting review to Supabase:', err);
+        }
+      }
 
       trackEvent({
         name: 'cta_click',

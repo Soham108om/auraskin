@@ -1,23 +1,42 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, ArrowRight } from 'lucide-react';
+import { Mail, Lock, ArrowRight, AlertCircle } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
+import { useAuth } from '../context/AuthContext';
 
 export const Login: React.FC = () => {
   const navigate = useNavigate();
+  const { signIn, user } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
+  const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (email && password) {
-      // Trigger GA4 login event
-      trackEvent({
-        name: 'login',
-        params: { method: 'email' },
-      });
-      alert(`Welcome back to AuraSkin! Sign-in successful.`);
-      navigate('/');
+      setLoading(true);
+      setError('');
+      
+      const res = await signIn(email, password);
+      setLoading(false);
+      
+      if (res.success) {
+        trackEvent({
+          name: 'login',
+          params: { method: 'email' },
+        });
+        navigate('/dashboard');
+      } else {
+        setError(res.error || 'Invalid credentials. Please try again.');
+      }
     }
   };
 
@@ -30,6 +49,13 @@ export const Login: React.FC = () => {
       </div>
 
       <form onSubmit={handleLoginSubmit} className="bg-[#FFF8F2]/40 border border-[#E8DEC9]/30 rounded-2xl p-6 md:p-8 space-y-4 shadow-sm">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-4 py-3 rounded-xl flex items-center space-x-2 font-sans">
+            <AlertCircle size={14} className="flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
         <div className="space-y-1.5">
           <label className="text-[10px] uppercase tracking-wider text-[#222222]/60 font-sans font-semibold">Email Address</label>
           <div className="flex items-center border border-[#E8DEC9] rounded-xl bg-[#FAF9F6] p-3 space-x-2">
@@ -62,9 +88,10 @@ export const Login: React.FC = () => {
 
         <button
           type="submit"
-          className="w-full bg-[#222222] hover:bg-[#222222]/90 text-white font-sans text-xs uppercase tracking-[0.2em] font-semibold py-3.5 px-6 rounded-full flex items-center justify-center space-x-2 transition-all active:scale-95 shadow-md"
+          disabled={loading}
+          className="w-full bg-[#222222] hover:bg-[#222222]/90 disabled:bg-[#222222]/50 text-white font-sans text-xs uppercase tracking-[0.2em] font-semibold py-3.5 px-6 rounded-full flex items-center justify-center space-x-2 transition-all active:scale-95 shadow-md"
         >
-          <span>Sign In</span>
+          <span>{loading ? 'Signing In...' : 'Sign In'}</span>
           <ArrowRight size={12} />
         </button>
       </form>

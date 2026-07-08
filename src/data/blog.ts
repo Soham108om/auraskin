@@ -39,7 +39,7 @@ export const blogPosts: BlogPost[] = [
     - Premature signs of aging, as dehydrated skin highlights fine lines
 
     Applying a ceramide-rich cream, like the AuraSkin Ceramide-Barrier Rich Cream, helps rebuild this protective layer. By introducing bio-identical ceramides (like Ceramide NP, AP, and EOP), you can successfully fill in the gaps in your skin's lipid mortar, trapping moisture deep inside and returning your skin to a plump, smooth state.`,
-    image: "https://images.unsplash.com/photo-1608248597481-496100c80836?q=80&w=600&auto=format&fit=crop",
+    image: "https://images.unsplash.com/photo-1556228720-195a672e8a03?q=80&w=600&auto=format&fit=crop",
     author: "Elena Rostova, Lead Formulator",
     date: "May 12, 2026",
     readTime: "5 min read"

@@ -1,24 +1,50 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, User, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User, ArrowRight, AlertCircle } from 'lucide-react';
 import { trackEvent } from '../utils/analytics';
+import { useAuth } from '../context/AuthContext';
 
 export const Register: React.FC = () => {
   const navigate = useNavigate();
+  const { signUp, user } = useAuth();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  const handleRegisterSubmit = (e: React.FormEvent) => {
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user) {
+      navigate('/dashboard');
+    }
+  }, [user, navigate]);
+
+  const handleRegisterSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (name && email && password) {
-      // Trigger GA4 register event
-      trackEvent({
-        name: 'register',
-        params: { method: 'email' },
-      });
-      alert(`Account registration successful! Welcome to the AuraSkin circle.`);
-      navigate('/');
+    if (name.trim() && email && password) {
+      setLoading(true);
+      setError('');
+
+      // Split first and last name
+      const nameParts = name.trim().split(/\s+/);
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+
+      const res = await signUp(email, password, firstName, lastName);
+      setLoading(false);
+
+      if (res.success) {
+        // Trigger GA4 register event
+        trackEvent({
+          name: 'register',
+          params: { method: 'email' },
+        });
+        alert(`Welcome to the AuraSkin circle! Account created successfully.`);
+        navigate('/dashboard');
+      } else {
+        setError(res.error || 'Failed to create account. Please try again.');
+      }
     }
   };
 
@@ -31,6 +57,13 @@ export const Register: React.FC = () => {
       </div>
 
       <form onSubmit={handleRegisterSubmit} className="bg-[#FFF8F2]/40 border border-[#E8DEC9]/30 rounded-2xl p-6 md:p-8 space-y-4 shadow-sm">
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-700 text-xs px-4 py-3 rounded-xl flex items-center space-x-2 font-sans">
+            <AlertCircle size={14} className="flex-shrink-0" />
+            <span>{error}</span>
+          </div>
+        )}
+
         <div className="space-y-1.5">
           <label className="text-[10px] uppercase tracking-wider text-[#222222]/60 font-sans font-semibold">Your Name</label>
           <div className="flex items-center border border-[#E8DEC9] rounded-xl bg-[#FAF9F6] p-3 space-x-2">
@@ -78,9 +111,10 @@ export const Register: React.FC = () => {
 
         <button
           type="submit"
-          className="w-full bg-[#222222] hover:bg-[#222222]/90 text-white font-sans text-xs uppercase tracking-[0.2em] font-semibold py-3.5 px-6 rounded-full flex items-center justify-center space-x-2 transition-all active:scale-95 shadow-md"
+          disabled={loading}
+          className="w-full bg-[#222222] hover:bg-[#222222]/90 disabled:bg-[#222222]/50 text-white font-sans text-xs uppercase tracking-[0.2em] font-semibold py-3.5 px-6 rounded-full flex items-center justify-center space-x-2 transition-all active:scale-95 shadow-md"
         >
-          <span>Register Account</span>
+          <span>{loading ? 'Creating Account...' : 'Register Account'}</span>
           <ArrowRight size={12} />
         </button>
       </form>

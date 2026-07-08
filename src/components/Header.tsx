@@ -4,16 +4,31 @@ import { Search, Heart, ShoppingBag, User, Menu, X, ArrowRight } from 'lucide-re
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { trackEvent } from '../utils/analytics';
+import { useAuth } from '../context/AuthContext';
 
 export const Header: React.FC = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const { cartItems } = useCart();
   const { wishlistItems } = useWishlist();
+  const { user, profile, signOut } = useAuth();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [searchOpen, setSearchOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState('');
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+
+  // Close dropdown on click outside
+  React.useEffect(() => {
+    const handleOutsideClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (dropdownOpen && !target.closest('.profile-dropdown-container')) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('click', handleOutsideClick);
+    return () => document.removeEventListener('click', handleOutsideClick);
+  }, [dropdownOpen]);
 
   const cartCount = cartItems.reduce((acc, item) => acc + item.quantity, 0);
   const wishlistCount = wishlistItems.length;
@@ -133,14 +148,56 @@ export const Header: React.FC = () => {
             )}
           </Link>
 
-          <Link 
-            to="/login" 
-            onClick={() => handleNavClick('Login', '/login')}
-            className="hover:text-[#D4AF37] transition-all hover:scale-105 active:scale-95"
-            title="Login"
-          >
-            <User size={18} />
-          </Link>
+          {user ? (
+            <div className="relative profile-dropdown-container">
+              <button
+                onClick={() => setDropdownOpen(!dropdownOpen)}
+                className="flex items-center space-x-1 hover:text-[#D4AF37] transition-all focus:outline-none"
+                title="Account Settings"
+              >
+                <div className="w-7 h-7 bg-[#222222] text-[#FAF9F6] text-[10px] font-semibold font-serif rounded-full flex items-center justify-center border border-[#E8DEC9]/35">
+                  {profile?.first_name ? profile.first_name[0].toUpperCase() : user.email?.[0].toUpperCase()}
+                </div>
+              </button>
+              
+              {dropdownOpen && (
+                <div className="absolute right-0 mt-3 w-44 bg-[#FAF9F6] border border-[#E8DEC9]/40 rounded-2xl shadow-xl py-2 z-50 animate-fade-in font-sans text-xs">
+                  <div className="px-4 py-2 border-b border-[#E8DEC9]/20 text-[#222222]/50 truncate">
+                    Hi, {profile?.first_name || 'Partner'}
+                  </div>
+                  <Link
+                    to="/dashboard"
+                    onClick={() => {
+                      setDropdownOpen(false);
+                      handleNavClick('Dashboard', '/dashboard');
+                    }}
+                    className="block px-4 py-2 text-[#222222] hover:bg-[#FFF8F2] hover:text-[#D4AF37] transition-colors font-medium"
+                  >
+                    My Portal
+                  </Link>
+                  <button
+                    onClick={async () => {
+                      setDropdownOpen(false);
+                      await signOut();
+                      navigate('/');
+                    }}
+                    className="w-full text-left block px-4 py-2 text-red-600 hover:bg-red-50 transition-colors font-medium"
+                  >
+                    Sign Out
+                  </button>
+                </div>
+              )}
+            </div>
+          ) : (
+            <Link 
+              to="/login" 
+              onClick={() => handleNavClick('Login', '/login')}
+              className="hover:text-[#D4AF37] transition-all hover:scale-105 active:scale-95"
+              title="Login"
+            >
+              <User size={18} />
+            </Link>
+          )}
         </div>
       </nav>
 
