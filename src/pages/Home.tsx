@@ -212,10 +212,7 @@ export const Home: React.FC<HomeProps> = ({ onQuickView }) => {
           <span className="text-xs uppercase tracking-[0.3em] text-[#D4AF37] font-semibold font-sans block animate-fade-in-up">
             Introducing Skin-Minimalism
           </span>
-          <h1 className="text-4xl md:text-6xl font-serif leading-tight font-light text-[#FAF9F6] animate-fade-in-up">
-            Radiance Refined. <br />
-            <span className="serif-italic font-normal text-[#D4AF37]">Designed for the Skin Barrier.</span>
-          </h1>
+
           <p className="text-sm md:text-base text-[#FAF9F6]/85 font-sans font-light max-w-xl mx-auto leading-relaxed animate-fade-in-up">
             Feed your skin what it understands. High-performance, luxury skincare systems engineered to simplify your routine and optimize natural cellular repair.
           </p>
